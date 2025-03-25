@@ -103,7 +103,7 @@ export class AppComponent implements OnInit {
       this.email = userProfile.email || '';
       this.department = userProfile.attributes?.['Department']?.[0] || '';
       this.roles = this.keycloak.getUserRoles();
-      console.log(this.roles); // Debugging line to check roles
+      console.log(this.roles); 
     }
 
     this.router.events.subscribe(() => {
@@ -120,13 +120,13 @@ export class AppComponent implements OnInit {
   }
 
   navigateTo(role: string) {
-    console.log('Navigating to:', role); // Debugging line to check navigation
+    console.log('Navigating to:', role); 
     const lowerCaseRole = role.toLowerCase();
     if (this.roles.map(r => r.toLowerCase()).includes(lowerCaseRole)) {
-      console.log('Role found:', role); // Debugging line to check role match
+      console.log('Role found:', role); 
       this.router.navigate([`/${lowerCaseRole}`]);
     } else {
-      console.log('Role not found, redirecting to unauthorized'); // Debugging line for unauthorized access
+      console.log('Role not found, redirecting to unauthorized'); 
       this.router.navigate(['/unauthorized']);
     }
   }

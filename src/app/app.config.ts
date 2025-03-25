@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { KeycloakAngularModule, KeycloakService } from 'keycloak-angular';
 import { environment } from './keycloak.config';
+import { provideHttpClient } from '@angular/common/http';
 
 export function initializeKeycloak(keycloak: KeycloakService) {
   return () =>
@@ -21,6 +22,7 @@ export function initializeKeycloak(keycloak: KeycloakService) {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
+    provideHttpClient(),
     importProvidersFrom(KeycloakAngularModule),
     KeycloakService,
     {
