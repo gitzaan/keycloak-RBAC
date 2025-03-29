@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { KeycloakService } from 'keycloak-angular';
+import Keycloak from 'keycloak-js';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 
@@ -7,105 +7,44 @@ import { RouterModule, Router, ActivatedRoute } from '@angular/router';
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  template: `
-    <div *ngIf="isRootPath; else otherContent">
-      <div class="container">
-        <h1>Keycloak Authentication Demo</h1>
-        
-        <div *ngIf="isLoggedIn; else loginTemplate">
-          <div class="auth-section">
-            <div class="text">
-              <p>Welcome {{ firstName + " " + lastName }}!</p>
-              <p>Your username is {{ username }}</p>
-              <p>Your email is {{ email }}</p>
-              <p>Your department is {{ department }}</p>
-            </div>
-            <button (click)="logout()">Logout</button>
-            <div class="role-buttons">
-              <button (click)="navigateTo('manager')">Manager Console</button>
-              <button (click)="navigateTo('admin')">Admin Console</button>
-              <button (click)="navigateTo('user')">User Console</button>
-            </div>
-          </div>
-        </div>
-        <ng-template #loginTemplate>
-          <div class="auth-section">
-            <button (click)="login()">Login with Keycloak</button>
-          </div>
-        </ng-template>
-      </div>
-    </div>
-    <ng-template #otherContent>
-      <router-outlet></router-outlet>
-    </ng-template>
-  `,
-  styles: [`
-    .text {
-      color: rgb(0, 0, 0);
-      font-size: 20px;
-      text-align: left;
-    }
-    .container {
-      max-width: 800px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-    }
-    .auth-section {
-      margin-top: 2rem;
-      padding: 1.5rem;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      text-align: center;
-    }
-    .role-buttons {
-      margin-top: 1rem;
-    }
-    button {
-      padding: 0.75rem 1.5rem;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: background 0.3s ease;
-      margin: 0.5rem;
-
-      &:hover {
-        background: #0056b3;
-      }
-    }
-  `]
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css'],
 })
 export class AppComponent implements OnInit {
-  private keycloak = inject(KeycloakService);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
-  
+  private readonly keycloak = inject(Keycloak);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   isLoggedIn = false;
   username = '';
   firstName = '';
-  lastName = "";
-  email= "";
+  lastName = '';
+  email = '';
   department = '';
   roles: string[] = [];
   isRootPath = true;
 
   async ngOnInit() {
-    this.isLoggedIn = await this.keycloak.isLoggedIn();
-    
+    this.isLoggedIn = await this.keycloak.authenticated ?? false;
     if (this.isLoggedIn) {
-      var userProfile :any = await this.keycloak.loadUserProfile();
-      console.log(userProfile);
-      this.username = userProfile.username || '';
-      this.firstName = userProfile.firstName || '';
-      this.lastName = userProfile.lastName || '';
-      this.email = userProfile.email || '';
-      this.department = userProfile.attributes?.['Department']?.[0] || '';
-      this.roles = this.keycloak.getUserRoles();
-      console.log(this.roles); 
-    }
+      try {
+        const tokenParsed = this.keycloak.tokenParsed;
+        if (tokenParsed) {
+          this.username = tokenParsed['preferred_username'] || tokenParsed['username'] || '';
+          this.firstName = tokenParsed['firstName'] || '';
+          this.lastName = tokenParsed['lastName'] || '';
+          this.email = tokenParsed['email'] || '';
+          this.department = (tokenParsed['attributes']?.['Department'] as string[] | undefined)?.[0] || '';
 
+          // Collect roles from both realm_access and resource_access
+          const realmRoles = (tokenParsed.realm_access?.roles || []).map(role => role.toLowerCase());
+          const resourceRoles = (tokenParsed.resource_access?.['my-app']?.roles || []).map(role => role.toLowerCase());
+          this.roles = [...realmRoles, ...resourceRoles];
+          console.log('User roles:', this.roles);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    }
     this.router.events.subscribe(() => {
       this.isRootPath = this.router.url === '/';
     });
@@ -120,13 +59,10 @@ export class AppComponent implements OnInit {
   }
 
   navigateTo(role: string) {
-    console.log('Navigating to:', role); 
     const lowerCaseRole = role.toLowerCase();
-    if (this.roles.map(r => r.toLowerCase()).includes(lowerCaseRole)) {
-      console.log('Role found:', role); 
+    if (this.roles.includes(lowerCaseRole)) {
       this.router.navigate([`/${lowerCaseRole}`]);
     } else {
-      console.log('Role not found, redirecting to unauthorized'); 
       this.router.navigate(['/unauthorized']);
     }
   }

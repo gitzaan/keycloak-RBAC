@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { KeycloakService } from 'keycloak-angular';
+import Keycloak from 'keycloak-js';
 import { HttpClient } from '@angular/common/http';
 import { saveAs } from 'file-saver';
 
@@ -91,8 +91,8 @@ import { saveAs } from 'file-saver';
   `]
 })
 export class ManagerComponent implements OnInit {
-  private keycloak = inject(KeycloakService);
-  private http = inject(HttpClient);
+  private readonly keycloak = inject(Keycloak) as Keycloak;
+  private readonly http = inject(HttpClient);
   
   hasReportPermission = false;
   
@@ -101,9 +101,9 @@ export class ManagerComponent implements OnInit {
   }
   
   async checkReportPermission() {
-    if (await this.keycloak.isLoggedIn()) {
-      const tokenParsed = this.keycloak.getKeycloakInstance().tokenParsed as any;
-      this.hasReportPermission = tokenParsed.canDownloadReports === true;
+    if (await this.keycloak.authenticated) {
+      const tokenParsed = this.keycloak.tokenParsed as { canDownloadReports?: boolean };
+      this.hasReportPermission = tokenParsed?.canDownloadReports === true;
       console.log('Has report permission:', this.hasReportPermission);
     }
   }
@@ -113,7 +113,6 @@ export class ManagerComponent implements OnInit {
       console.error('Access denied: Attempted to download report without permission');
       return;
     }
-    
     
     this.http.get('/assets/reports/performance-report.pdf', { responseType: 'blob' })
       .subscribe({

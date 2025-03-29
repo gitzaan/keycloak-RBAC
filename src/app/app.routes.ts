@@ -10,6 +10,6 @@ export const routes: Routes = [
   { path: 'admin', component: AdminComponent },
   { path: 'user', component: UserComponent },
   { path: 'unauthorized', component: UnauthorizedComponent },
-  { path: '', component: AppComponent, pathMatch: 'full' },
-  { path: '**', redirectTo: '/' } 
+  { path: '', component: AppComponent },
+  { path: '**', component: UnauthorizedComponent }
 ];
